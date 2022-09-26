@@ -1,0 +1,551 @@
+---
+title: "Final Assingment - Marvel vs. DC Exploratory Data Analysis"
+output:
+  rmdformats::material
+css: custom.css
+runtime: shiny
+
+---
+
+```{css, echo = FALSE}
+
+
+body {
+  font-family: Segoe UI;
+  color:  #D1B000;
+  font-size:16pt;
+  
+}
+.tabset{
+
+ color:  #D1B000;
+}
+.header-panel {
+  background-color: #E40019;
+  
+}
+
+
+}
+.pages h1 {
+  color: #042E6F;
+
+}
+ ul.nav.nav-tabs { 
+ background-color :#FC2F1E; 
+ } 
+<!-- a.active{ -->
+<!-- background-color :#115C46 -->
+}
+
+
+
+
+```
+<br>
+<style>
+div.red { background-color : #FC2F1E; border-radius: 15px; padding: 15px 10px 10px 10px;}
+</style>
+<div class = "red">
+
+# **About me** {#h1  } 
+
+##
+
+**Hi!\
+I am Kesem Adi, a 2nd year master's degree student in cognitive psychology.\
+<br />
+I.D:\
+Kesem Adi: 302585823**
+</div>
+<br>
+<br>
+<br>
+<center>
+
+<img src="https://media.comicbook.com/2018/02/marvel-vs-dc-twitter-trending-topic-2018-1079944.jpeg">
+
+</center>
+<br>
+
+<br />
+```{r setup, echo=FALSE,warning=FALSE, eval=TRUE, include=FALSE}
+setwd("C:/Users/kesem adi/OneDrive/שולחן העבודה/cognitive psychology/מיומנות במדעי הנתונים/data")
+data1 <- read.csv("dc-marvel data.csv",header=T, na.strings=c("","NA"))
+library(rstatix)
+library(ggplot2)
+library(plotly)
+library(ggpubr)
+library(tidylog)
+library(shiny)
+library(DT)
+library(rgdal)
+library(ggcorrplot)
+library(kableExtra)
+library(skimr)
+library(tidyverse)
+library(dplyr)
+library(scales)
+library(extrafont)
+library(gridExtra)
+library(grid)
+library(ggpubr)
+library(fmsb)
+library(plotly)
+library(shinyWidgets)
+
+```
+
+```{r theme, echo=FALSE,warning=FALSE, eval=TRUE}
+red_wine <- '#FC2F1E'
+lightblue <- '#7FB3D5'
+grey <- '#B9BBBD'
+blue <- '#042E6F'
+#ggplot theme
+theme <- theme_minimal() +
+    theme(text = element_text(family = 'Montserrat'),
+          axis.text = element_text(size = rel(0.8), 
+                                   vjust = 0.5,
+                                   hjust = 0.5),
+          plot.title = element_text(hjust = 0.5, 
+                                    size = 14, 
+                                    family = "Kodchasan", 
+                                    colour = blue,
+                                    face = "bold"),
+          plot.subtitle = element_text(size = rel(1), 
+                                       vjust = 0.5,
+                                       hjust = 0.5,
+                                       face = "bold"),
+          strip.background = element_rect(fill = "white"),
+          strip.text = element_text(colour = blue),
+          legend.position = "bottom",
+          legend.justification = "center")
+#table theme
+format_table <- function(table_data, table_name) {
+    
+    bold = matrix("plain", nrow(table_data), ncol(table_data))
+    bold[, 1] <- "bold"
+    bold[, -1] <- "plain"
+    
+    tt1 <- ttheme_minimal(base_size = 12, 
+                          base_colour = blue, 
+                          base_family = "Kodchasan",
+                          core=list(bg_params = list(fill = c(red_wine, "white")),
+                                    fg_params = list(col = "black",
+                                                     fontface = bold)),
+                          colhead=list(fg_params = list(col = "white"),
+                                       bg_params = list(fill = blue),
+                                       padding=unit.c(unit(15, "mm"), unit(10, "mm"))))
+    
+    
+    table_grob <- tableGrob(table_data, 
+                            rows=NULL, 
+                            theme = tt1)
+    
+    table_presentation_orders <- grid.arrange(arrangeGrob(table_grob, 
+                                                          top = textGrob(table_name,                                                                               gp=gpar(fontsize=14, 
+                                                                        fontface = "bold",                                                                                 fontfamily = "Kodchasan",
+                                                                        col = red_wine))))
+}
+
+```
+# **About The data** {#h2 } 
+**I'm a big fan of Marvel and DC movies, so I wanted to look at the source of it all, the comics!.  
+Let's explore together the data describing the ongoing debate regarding Marvel vs. DC comics.
+**
+
+
+```{r tidy data,echo= FALSE, message=FALSE, warning=FALSE, eval=TRUE}
+data1 <- data1 %>% 
+  drop_na(sex)
+data1 <- data1 %>%
+    mutate(decade = year - (year %% 10),
+           sex = gsub(" Characters", "", sex),
+           sex = ifelse(sex %in% c("Female", "Male"),
+                        as.character(sex),
+                        "Other"))
+
+dat1 <- data1 %>%
+    group_by(universe, year) %>%
+    summarize(num = n()) 
+dat1 <- na.omit(dat1)
+
+
+```
+
+# **My Visualizations** {#h3 .tabset} 
+##  New Characters 
+</center>
+**First, let's see how many new characters were introduced each year. I will split it by DC and Marvel.
+**
+
+```{r nc plot 1, echo=FALSE, fig.dim=2}
+server <- function(input, output, session) {
+
+  
+  
+  #Summarize Data and then Plot
+  data <- reactive({
+    req(input$sel_universe)
+    df <- dat1 %>% filter(universe %in% input$sel_universe) 
+  })
+  
+  #Plot 
+  output$plot <- renderPlot({
+    
+    ggplot(data(),aes(x = year, y = num, colour = universe)) +
+        geom_line() +
+        geom_point() +
+        scale_colour_manual(values = c("dc" = blue, "marvel" = red_wine)) +
+        labs(title = "New characters in DC vs Marvel",
+             x = "Year", 
+             y = "New Characters",
+             colour = "Universe") +
+        theme+
+      scale_x_continuous(breaks = c(1940,1960,1980,2000,2013))
+    
+  })
+  
+
+}
+
+ui <- fluidPage(
+  h1("New characters by year"),
+  selectInput(inputId = "sel_universe",
+              label = "Choose universe",
+              list("dc","marvel")),
+  plotOutput("plot"),
+ 
+)
+
+shinyApp(ui = ui, server = server)
+
+
+```
+
+**It is visible that Marvel is introducing more characters than DC.  
+There were only several years between 1935 and 2013 where DC had more new characters then Marvel.  
+**
+
+##  Gender
+**Next, I wanted to see how many characters are presented each year and how they differ by gender.
+**
+```{r tidy gender,echo= FALSE, message=FALSE, warning=FALSE, eval=TRUE, include=FALSE}
+dat2 <- data1 %>%
+    filter(!is.na(sex)) %>%
+    group_by(universe, year, sex) %>%
+    summarize(num = n())
+
+```
+
+```{r gender  plot, echo=FALSE}
+
+
+    
+server <- function(input, output, session) {
+
+  
+  
+  #Summarize Data and then Plot
+  data2 <- reactive({
+    
+    req(input$sel_universe)
+    df <- dat2 %>% filter(universe %in% input$sel_universe) 
+  })
+  #now lets insert 2 inputs to choose from, gender and universe/ or, choose gender and display both marvel and dc overtime.
+  #Plot 
+  output$plot <- renderPlot({
+    
+    ggplot(data2(),aes(x = year, y = num, colour = sex)) +
+        geom_line() +
+      geom_point()+
+        scale_colour_manual(values = c("Male" = "#32cd32", "Female" = "#800080","Other" = grey)) +
+        labs(title = "New characters in DC vs Marvel",
+             subtitle = "By gender",
+             x = "Year", 
+             y = "Percent of new Characters",
+             colour = "sex") +
+        theme +
+      ylim(0,500)+
+            scale_x_continuous(breaks = c(1940,1960,1980,2000,2013))
+
+    
+  })
+  
+
+}
+
+
+ui <- fluidPage(
+  h1("Gender"),
+  selectInput(inputId = "sel_universe",
+              label = "Choose universe",
+              list("marvel","dc" )),
+  plotOutput("plot"),
+ 
+)
+
+shinyApp(ui = ui, server = server)
+
+```
+**Both Marvel and DC feature more male characters.
+    Marvel and DC also show a trend of introducing more female characters starting in the 1960s and 1980s, respectively.
+    It is possible that the Second Wave of Feminism in the USA influenced the increase presented around 1980.
+**
+
+##  Good vs Bad
+**
+Every movie, or comics revolves around the fight between good and bad.   
+Let's see how this fight looks like in Marvel vs DC.
+**
+```{r tidy villains, echo=FALSE, warning=FALSE, message=FALSE}
+
+
+
+dat3<- data1 %>%
+    mutate(align = ifelse(is.na(align),
+                          "Undefined",
+                          as.character(align))) %>%
+  filter(align!="Reformed Criminals") %>% 
+    group_by(universe, align) %>%
+    summarize(num = n()) %>%
+    group_by(universe) %>%
+    mutate(pct = round(num / sum(num), 4))
+
+```    
+
+```{r  villains plot, echo=FALSE, warning=FALSE, message=FALSE }
+server <- function(input, output, session) {
+
+  
+  
+  #Summarize Data and then Plot
+  data3 <- reactive({
+    
+    req(input$sel_universe)
+    df <- dat3 %>% filter(universe %in% input$sel_universe) 
+  })
+  #Plot 
+  output$plot <- renderPlot({
+    ggplot(data3(),aes(x = align, y = pct, fill = align, label = scales::percent(pct))) + 
+  geom_col(position = 'dodge') + 
+  
+  theme+
+  scale_fill_manual(values = c( "Bad Characters"= "black", "Good Characters" = lightblue,"Neutral Characters" = "gray"))+
+  labs(
+    title = "Good vs Bad",
+    x = "Alignment",
+    y = "Characters"
+  ) + geom_text(aes(), 
+                  position = "dodge", 
+                  family = "Montserrat",
+                  color = "white",
+                  fontface = "bold",
+                  vjust = 1) +
+        scale_y_continuous(labels = comma_format())
+      
+
+    
+  })
+  
+
+}
+
+
+ui <- fluidPage(
+  h1("Good vs bad characters"),
+  selectInput(inputId = "sel_universe",
+              label = "Choose universe",
+              list("marvel","dc" )),
+  plotOutput("plot"),
+ 
+)
+
+shinyApp(ui = ui, server = server)
+
+```
+
+**
+Compared to Marvel, DC has almost equal amounts of good and bad characters. Marvel has many bad characters, meaning more work for the good guys :)
+**
+```{r  villains char tidy, echo=FALSE, warning=FALSE, message=FALSE }
+dat4 <- data1 %>% 
+  filter(align == "Bad Characters") %>% 
+  group_by( hair,eye,  universe) %>% 
+  summarise(num = n())
+dat4 <- na.omit(dat4)
+
+dat6 <- data1 %>%
+  filter(align == "Bad Characters") %>% 
+    select(universe, hair, eye) %>%
+    filter(
+           !is.na(hair),
+           !is.na(eye)) %>%
+    mutate(appearance = paste0(hair, ',\n', eye))
+dat7 <- dat6 %>%
+    select("Universe" = universe, appearance) %>%
+    group_by(Universe, appearance) %>%
+    summarize(num = n()) %>%
+    group_by(Universe) %>%
+    mutate(rank = rank(desc(num), ties.method = "first")) 
+
+dat8 <- dat7 %>%
+    filter(rank <= 6) %>%
+    mutate(perc = num/ sum(num)) %>%
+    select(- rank) %>%
+    ungroup()
+```
+##  Villain's Traits
+
+**
+let's explore together the characteristics of the villains!  
+The majority of villains in both universes appear to have black hair and brown eyes**
+```{r  villain char active table, echo=FALSE, warning=FALSE, message=FALSE }
+
+server <- function(input, output, session) {
+
+  
+  
+  #Summarize Data and then Plot
+  data8 <- reactive({
+    
+    req(input$sel_U)
+    df <- dat8 %>% filter(Universe %in% input$sel_U) 
+  })
+ 
+  output$plot <- renderPlot({
+      data8() %>% 
+    ggplot(aes(x = appearance, y = perc, colour = Universe, fill = Universe, group = Universe)) +
+    geom_point(size = 4) + 
+    geom_polygon(alpha = 0.2) + 
+    labs(title = "Villain's Appearance by Universe",
+        y = NULL,
+         x = NULL)  + 
+    theme +
+    scale_colour_manual(values = c("marvel" = red_wine, "dc" = blue)) +
+    scale_fill_manual(values = c("marvel" = red_wine, "dc" = blue)) +
+    scale_y_continuous(labels = percent_format()) +
+    theme(axis.text.x = element_text(size = 10)) +
+    coord_polar()
+
+    
+  })
+  
+
+}
+
+
+ui <- fluidPage(
+  h1("Villain's Appearance by Universe"),
+  selectInput(inputId = "sel_U",
+              label = "Choose Villain's Universe",
+              list("marvel","dc"
+                 )),
+  plotOutput("plot"),
+ 
+)
+
+shinyApp(ui = ui, server = server)
+```
+
+
+**
+Now you try!
+Find out what most characterizes the villains in Marvel vs. DC by searching the table
+**
+```{r  villain char active table2, echo=FALSE, warning=FALSE, message=FALSE }
+
+
+ui <- basicPage(
+  h2("Villain's Traits"),
+  DT::dataTableOutput("mytable")
+)
+
+server <- function(input, output) {
+  output$mytable = DT::renderDataTable({
+    dat4
+  })
+}
+  
+shinyApp(ui, server)
+```
+
+## character's Identity
+
+**
+What about characters identities?    
+Is There is a tendency for superheros to hide their identities more than their fellow villains?   
+or is it the other way around?
+Let's explore it.
+**
+```{r   identitiy tidy, echo=FALSE, warning=FALSE, message=FALSE }
+dat5 <- data1 %>% 
+  drop_na(id) %>% 
+  filter(align != "Reformed Criminals") %>% 
+  group_by(id, align) %>%
+    summarize(num = n()) %>%
+    group_by(id) %>%
+    mutate(pct = round(num / sum(num), 4))
+
+
+```
+
+```{r   identitiy check, echo=FALSE, warning=FALSE, message=FALSE,fig.dim=5 }
+
+  
+  
+server <- function(input, output, session) {
+
+  
+  
+  #Summarize Data and then Plot
+  data5 <- reactive({
+    
+    req(input$sel_id)
+    df <- dat5 %>% filter(id %in% input$sel_id) 
+  })
+ 
+  output$plot <- renderPlot({
+    ggplot(data5(),aes(x = align, y = pct, fill = align, label = scales::percent(pct))) + 
+  geom_col(position = 'dodge') + 
+  
+  theme+
+  scale_fill_manual(values = c( "Bad Characters"= "black", "Good Characters" = lightblue,"Neutral Characters" = "gray"))+
+  labs(
+    title = "character's Identity",
+    x = "Alignment",
+    y = "Characters"
+  ) + geom_text(aes(), 
+                  position = "dodge", 
+                  family = "Montserrat",
+                  color = "white",
+                  fontface = "bold",
+                  vjust = 1) +
+        scale_y_continuous(labels = comma_format())
+      
+
+    
+  })
+  
+
+}
+
+
+ui <- fluidPage(
+  h1("Good vs bad characters"),
+  selectInput(inputId = "sel_id",
+              label = "Choose ID",
+              list("Identity Unknown","Known to Authorities Identity","Public Identity",
+                 "Secret Identity"  )),
+  plotOutput("plot"),
+ 
+)
+
+shinyApp(ui = ui, server = server)
+```
+
+**
+We can see that secret identities are very high among bad characters, and that public identities are high among good characters.  
+We can therefore assume that villains hide their identities more than superheroes.
+**
+
