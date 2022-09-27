@@ -120,33 +120,7 @@ theme <- theme_minimal() +
           strip.text = element_text(colour = blue),
           legend.position = "bottom",
           legend.justification = "center")
-#table theme
-format_table <- function(table_data, table_name) {
-    
-    bold = matrix("plain", nrow(table_data), ncol(table_data))
-    bold[, 1] <- "bold"
-    bold[, -1] <- "plain"
-    
-    tt1 <- ttheme_minimal(base_size = 12, 
-                          base_colour = blue, 
-                          base_family = "Kodchasan",
-                          core=list(bg_params = list(fill = c(red_wine, "white")),
-                                    fg_params = list(col = "black",
-                                                     fontface = bold)),
-                          colhead=list(fg_params = list(col = "white"),
-                                       bg_params = list(fill = blue),
-                                       padding=unit.c(unit(15, "mm"), unit(10, "mm"))))
-    
-    
-    table_grob <- tableGrob(table_data, 
-                            rows=NULL, 
-                            theme = tt1)
-    
-    table_presentation_orders <- grid.arrange(arrangeGrob(table_grob, 
-                                                          top = textGrob(table_name,                                                                               gp=gpar(fontsize=14, 
-                                                                        fontface = "bold",                                                                                 fontfamily = "Kodchasan",
-                                                                        col = red_wine))))
-}
+
 
 ```
 # **About The data** {#h2 } 
